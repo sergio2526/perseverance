@@ -14,25 +14,67 @@ Simulación interactiva en el navegador del rover Perseverance explorando el cr�
 | Terreno | Heightmap (DEM de Jezero, HiRISE/MOLA) | Realismo topográfico |
 | Tests | Vitest | Lógica de movimiento y física |
 
+## Estado actual (2026-11-07)
+
+Hecho:
+- **Escena de Marte:**
+  - dunas procedurales y unas 700 rocas instanciadas
+  - cielo caramelo con halo solar
+  - polvo en suspensión
+  - sol de tarde con sombras suaves
+  - Fobos y Deimos
+  - post-procesado: bloom, viñeta y ACES
+- **Rover oficial de la NASA** (`public/models/perseverance.glb`, comprimido con Draco):
+  - escalado a 3 m y apoyado en el terreno, inclinándose con la pendiente
+  - manejo con WASD o flechas
+  - huellas con dibujo de grousers
+  - cámara de seguimiento orbitable
+- **Colisión con rocas grandes** (escala ≥ 0.4) mediante círculos en XZ; las pequeñas se pueden pisar.
+- **`npm run check`**: Playwright con el Chrome del sistema en modo invisible. Hace:
+  - prueba de manejo de 12 m
+  - prueba de colisión contra una roca
+  - captura en `screenshots/check.png`
+  - lista de errores de consola
+
+Pendiente: Rapier, HUD, cámaras a bordo, brazo robótico, misión e Ingenuity (ver fases).
+
+Piezas del modelo que son cámaras (para las cámaras a bordo):
+`Mastcam_Z_cams`, `NavCams`, `hazcams_front`, `hazcams_rear`, `WATSON`, `Up_Look_Camera`, `Down_Look_Camera`, `lens`.
+
 ## Comandos
 
 ```bash
-npm create vite@latest . -- --template vanilla-ts
-npm install three @dimforge/rapier3d-compat lil-gui
-npm install -D @types/three vitest
-npm run dev      # servidor de desarrollo
-npm run build    # build de producción
-npm test         # tests
+npm install
+npm run dev      # servidor en http://localhost:5173
+npm run check    # captura + errores de consola + pruebas de manejo y colisión (correr tras cada cambio grande)
+npm run build    # tsc + build de producción
+npx tsc --noEmit # verificación de tipos
 ```
+
+## Notas técnicas (versiones actuales)
+
+- **Three.js r187:**
+  - `PCFSoftShadowMap` fue eliminado; se usa `PCFShadowMap` con `shadow.radius`.
+  - `THREE.Clock` está obsoleto; se usa `THREE.Timer`.
+- **Draco:** el GLB de la NASA usa compresión Draco. El decodificador está copiado en `public/draco/`, así que no depende de una CDN.
+- **Ruedas:** en el modelo las 6 ruedas son una sola malla (`Wheels_objs`), así que no pueden girar por separado.
+- **Velocidad:** la del rover está acelerada a 2.5 m/s; la real es de unos 4.2 cm/s.
+- **`npm run check`:**
+  - Conduce por distancia y no por tiempo, porque el Chrome invisible (SwiftShader) va a unos 20 FPS.
+  - Ignora los avisos `GL Driver Message`, que vienen del navegador y no de la app.
+  - Usa `window.__debug` (odómetro, huellas, FPS, apuntar a roca, hueco con la roca) y `window.__sceneReady`.
 
 ## Estructura del proyecto
 
 ```
 perseverancia/
 ├── CLAUDE.md
+├── plan.md                  # plan del paisaje de Marte
 ├── index.html
 ├── package.json
+├── scripts/check.mjs        # npm run check
 ├── public/
+│   ├── draco/               # decodificador Draco
 │   ├── models/perseverance.glb
 │   ├── textures/        # suelo marciano, normal map, cielo
 │   └── terrain/jezero_heightmap.png
@@ -46,9 +88,12 @@ perseverancia/
     │   ├── Terrain.ts       # malla + collider desde heightmap
     │   ├── Sky.ts           # cielo butterscotch, sol, polvo
     │   ├── Lighting.ts      # luz solar + ambiente
-    │   └── Rocks.ts         # rocas instanciadas (InstancedMesh)
+    │   ├── Rocks.ts         # rocas instanciadas (InstancedMesh) + rockColliders
+    │   ├── Moons.ts         # Fobos y Deimos
+    │   └── Dust.ts          # partículas de polvo
     ├── rover/
-    │   ├── Rover.ts         # ensamblaje chasis + ruedas + brazo
+    │   ├── Rover.ts         # carga del GLB, conducción, apoyo en terreno, colisiones
+    │   ├── Tracks.ts        # huellas (InstancedMesh en búfer circular)
     │   ├── Suspension.ts    # rocker-bogie
     │   ├── Drive.ts         # control de ruedas y dirección
     │   ├── RoboticArm.ts    # brazo con cinemática inversa

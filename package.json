@@ -1,0 +1,20 @@
+{
+  "name": "perseverancia",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173 --host",
+    "build": "tsc --noEmit && vite build",
+    "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "@types/three": "^0.187.0",
+    "three": "^0.187.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.0"
+  }
+}
